@@ -311,6 +311,42 @@
             letter-spacing: 0.5px;
         }
 
+        /* --- AUTO-PLAY INDICATOR --- */
+        .auto-indicator {
+            position: absolute;
+            top: 1.2rem;
+            right: 1.5rem;
+            z-index: 25;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.15);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            pointer-events: none;
+            user-select: none;
+        }
+
+        .auto-indicator .pulse-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ff0033;
+            animation: pulse-dot 1.8s ease-in-out infinite;
+        }
+
+        @keyframes pulse-dot {
+            0%,
+            100% {
+                opacity: 0.3;
+                transform: scale(0.8);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+        }
+
         /* --- NAVIGATION CONTROLS --- */
         .slider-controls {
             position: absolute;
@@ -477,6 +513,12 @@
                 font-size: 0.75rem;
                 padding: 0.2rem 0.8rem;
             }
+
+            .auto-indicator {
+                top: 0.8rem;
+                right: 1rem;
+                font-size: 0.6rem;
+            }
         }
 
         @media (max-width: 480px) {
@@ -538,6 +580,12 @@
 
     <!-- ===== SLIDER CONTAINER ===== -->
     <div class="slider-container" role="region" aria-label="Welcome slider">
+
+        <!-- Auto‑play indicator -->
+        <div class="auto-indicator">
+            <span class="pulse-dot"></span>
+            AUTO
+        </div>
 
         <!-- Slides Track -->
         <div class="slides-track" id="slidesTrack">
@@ -642,26 +690,24 @@
                 <p>Consistency is key. <strong>New content every week.</strong><br>Stay tuned, stay inspired.</p>
             </section>
 
-            <!-- ===== SLIDE 9: CALL TO ACTION (REAL SUBSCRIBE) ===== -->
+            <!-- ===== SLIDE 9: CALL TO ACTION ===== -->
             <section class="slide slide-9" data-index="8">
                 <span class="icon">🔔</span>
                 <span class="badge new">Be the First</span>
                 <h2>Hit That <span class="highlight-pink">Subscribe</span> Button!</h2>
                 <p>Be the <strong>very first subscriber</strong>.<br>Turn on the bell so you don't miss a single moment of this journey.</p>
-                <!-- REAL SUBSCRIBE BUTTON — links to your channel with sub confirmation -->
                 <a class="btn btn-primary" href="https://www.youtube.com/@KTech-k4w?sub_confirmation=1" target="_blank" rel="noopener noreferrer">
                     🔔 Subscribe Now
                 </a>
                 <p style="font-size:0.8rem; margin-top:0.6rem; color:var(--text-muted);">Join from Day 1. Let's build this together.</p>
             </section>
 
-            <!-- ===== SLIDE 10: FINAL PUSH (REAL WATCH) ===== -->
+            <!-- ===== SLIDE 10: FINAL PUSH ===== -->
             <section class="slide slide-10" data-index="9">
                 <span class="icon">🏗️</span>
                 <span class="badge">Let's Go</span>
                 <h2>Ready to <span class="highlight-gold">Build</span>?</h2>
                 <p>The first video is waiting. Let's create something <strong>amazing</strong> together.<br>See you inside!</p>
-                <!-- REAL WATCH BUTTON — links to your channel's videos -->
                 <a class="btn btn-gold" href="https://www.youtube.com/@KTech-k4w/videos" target="_blank" rel="noopener noreferrer">
                     🚀 Watch First Video
                 </a>
@@ -696,13 +742,20 @@
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
 
+        // --- AUTO-PLAY CONFIG ---
+        const AUTO_DELAY = 4000; // 4 seconds
+        let autoPlayTimer = null;
+
         // --- CREATE DOTS ---
         for (let i = 0; i < totalSlides; i++) {
             const dot = document.createElement('button');
             dot.className = 'dot' + (i === 0 ? ' active' : '');
             dot.setAttribute('aria-label', `Go to slide ${i + 1}`);
             dot.dataset.index = i;
-            dot.addEventListener('click', () => goToSlide(i));
+            dot.addEventListener('click', () => {
+                resetAutoPlay();
+                goToSlide(i);
+            });
             dotsContainer.appendChild(dot);
         }
 
@@ -732,25 +785,59 @@
             setTimeout(() => {
                 isTransitioning = false;
             }, 600);
+
+            // Reset auto-play timer on manual interaction
+            resetAutoPlay();
         }
 
-        // --- NAVIGATION EVENTS ---
+        // --- AUTO-PLAY FUNCTIONS ---
+        function startAutoPlay() {
+            if (autoPlayTimer) clearInterval(autoPlayTimer);
+            autoPlayTimer = setInterval(() => {
+                if (!isTransitioning) {
+                    const next = (currentIndex + 1) % totalSlides;
+                    goToSlide(next);
+                }
+            }, AUTO_DELAY);
+        }
+
+        function resetAutoPlay() {
+            if (autoPlayTimer) {
+                clearInterval(autoPlayTimer);
+                autoPlayTimer = null;
+            }
+            startAutoPlay();
+        }
+
+        // --- NAVIGATION EVENTS (reset auto-play on manual click) ---
         prevBtn.addEventListener('click', () => {
-            if (currentIndex > 0) goToSlide(currentIndex - 1);
+            if (currentIndex > 0) {
+                resetAutoPlay();
+                goToSlide(currentIndex - 1);
+            }
         });
 
         nextBtn.addEventListener('click', () => {
-            if (currentIndex < totalSlides - 1) goToSlide(currentIndex + 1);
+            if (currentIndex < totalSlides - 1) {
+                resetAutoPlay();
+                goToSlide(currentIndex + 1);
+            }
         });
 
         // --- KEYBOARD SUPPORT ---
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
                 e.preventDefault();
-                if (currentIndex < totalSlides - 1) goToSlide(currentIndex + 1);
+                if (currentIndex < totalSlides - 1) {
+                    resetAutoPlay();
+                    goToSlide(currentIndex + 1);
+                }
             } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
                 e.preventDefault();
-                if (currentIndex > 0) goToSlide(currentIndex - 1);
+                if (currentIndex > 0) {
+                    resetAutoPlay();
+                    goToSlide(currentIndex - 1);
+                }
             }
         });
 
@@ -775,13 +862,15 @@
             if (Math.abs(diff) < threshold) return;
 
             if (diff > 0 && currentIndex < totalSlides - 1) {
+                resetAutoPlay();
                 goToSlide(currentIndex + 1);
             } else if (diff < 0 && currentIndex > 0) {
+                resetAutoPlay();
                 goToSlide(currentIndex - 1);
             }
         }
 
-        // --- TOAST (for any notifications) ---
+        // --- TOAST (for notifications) ---
         function showToast(msg) {
             const toast = document.getElementById('toast');
             toast.textContent = msg;
@@ -794,10 +883,12 @@
 
         // --- INIT ---
         goToSlide(0);
+        startAutoPlay(); // start auto-play immediately
 
-        console.log('🚀 Welcome to KTech — 10-Page Slider!');
+        console.log('🚀 Welcome to KTech — Auto Slider!');
         console.log('📺 Subscribe: https://www.youtube.com/@KTech-k4w?sub_confirmation=1');
         console.log('🎬 Watch: https://www.youtube.com/@KTech-k4w/videos');
+        console.log('⏩ Auto-advances every 4 seconds. Click arrows or dots to take control.');
     </script>
 
 </body>
